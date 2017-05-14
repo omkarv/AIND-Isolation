@@ -20,6 +20,22 @@ class IsolationTest(unittest.TestCase):
         self.player2 = "Player2"
         self.game = isolation.Board(self.player1, self.player2)
 
+    def test_initial_board(self):
+        self.assertEqual(len(self.game.get_blank_spaces()), 49)
+
+    def test_initial_legal_moves(self):
+        self.assertEqual(len(self.game.get_legal_moves(self.player1)), 49)
+
+    def test_player_initialized(self):
+        self.assertEqual(self.game.active_player, "Player1")
+
+    def test_minimax(self):
+        isolation_player = game_agent.MinimaxPlayer()
+        self.assertEqual(isolation_player.minimax(self.game, 2), (0, 0))
+
+    def test_alphabeta(self):
+        isolation_player = game_agent.AlphaBetaPlayer(4)
+        self.assertEqual(isolation_player.alphabeta(self.game, 4), (0, 0))
 
 if __name__ == '__main__':
     unittest.main()
