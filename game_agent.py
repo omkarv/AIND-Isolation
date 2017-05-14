@@ -34,14 +34,11 @@ def custom_score(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    # return len(game.get_legal_moves(player))
-
     if game.is_loser(player):
         return float("-inf")
 
     if game.is_winner(player):
         return float("inf")
-
 
     center_score = 0
     if game.get_player_location(player) is not None:
@@ -51,7 +48,7 @@ def custom_score(game, player):
 
     own_moves = len(game.get_legal_moves(player))
     opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
-    return float(own_moves - opp_moves - 10*center_score)
+    return float(own_moves - opp_moves - 10 * center_score)
 
 def custom_score_2(game, player):
     """Calculate the heuristic value of a game state from the point of view
@@ -75,9 +72,9 @@ def custom_score_2(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    # TODO: finish this function!
-    raise NotImplementedError
-
+    own_moves = len(game.get_legal_moves(player))
+    opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
+    return float(own_moves - opp_moves)
 
 def custom_score_3(game, player):
     """Calculate the heuristic value of a game state from the point of view
@@ -101,9 +98,21 @@ def custom_score_3(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    # TODO: finish this function!
-    raise NotImplementedError
+    if game.is_loser(player):
+        return float("-inf")
 
+    if game.is_winner(player):
+        return float("inf")
+
+    center_score = 0
+    if game.get_player_location(player) is not None:
+        y, x = game.get_player_location(player)
+        w, h = game.width / 2., game.height / 2.
+        center_score = float((h - y)**2 + (w - x)**2)
+
+    own_moves = len(game.get_legal_moves(player))
+    opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
+    return float(own_moves - opp_moves - center_score)
 
 class IsolationPlayer:
     """Base class for minimax and alphabeta agents -- this class is never
@@ -174,15 +183,14 @@ class MinimaxPlayer(IsolationPlayer):
         # in case the search fails due to timeout
         best_move = (-1, -1)
 
-        # try:
-        #     # The try/except block will automatically catch the exception
-        #     # raised when the timer is about to expire.
-        #     return self.minimax(game, self.search_depth)
-        #
-        # except SearchTimeout:
-        #     pass  # Handle any actions required after timeout as needed
+        try:
+            # The try/except block will automatically catch the exception
+            # raised when the timer is about to expire.
+            return self.minimax(game, self.search_depth)
 
-        # Return the best move from the last completed search iteration
+        except SearchTimeout:
+            pass  # Handle any actions required after timeout as needed
+
         return best_move
 
     def minimax(self, game, depth):
@@ -325,19 +333,21 @@ class AlphaBetaPlayer(IsolationPlayer):
         """
         self.time_left = time_left
         best_move = (-1, -1)
-        # depth = 0
-        # # if self.time_left() < self.TIMER_THRESHOLD:
-        # #     raise SearchTimeout()
-        #
-        # try:
-        #     while True:
-        #         depth = depth + 1
-        #         best_move = self.alphabeta(self, game, depth)
-        # except SearchTimeout:
-        #     return best_move
+        depth = 0
+
+        try:
+            # The try/except block will automatically catch the exception
+            # raised when the timer is about to expire.
+            while True:
+                depth = depth + 1
+                best_move = self.alphabeta(game, depth)
+
+        except SearchTimeout:
+            pass  # Handle any actions required after timeout as needed
+
         return best_move
 
-    def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf"), player="MaximizingPlayer"):
+    def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf"), player="MaximizingPlayer", max_depth=None):
         """Implement depth-limited minimax search with alpha-beta pruning as
         described in the lectures.
 
@@ -385,34 +395,34 @@ class AlphaBetaPlayer(IsolationPlayer):
                 each helper function or else your agent will timeout during
                 testing.
         """
+        if max_depth is None:
+            self.max_depth = depth
+
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
         best_move = (-1, -1)
 
-        if (player is "MaximizingPlayer"):
+        if player is "MaximizingPlayer":
             moves = game.get_legal_moves()
 
             # Terminal test
             if (depth is 0 or len(moves) is 0):
                 return self.score(game, game.active_player)
 
-            v = float("-inf")
+            # the notation for utility is 'v' in AIMA https://github.com/aimacode/aima-pseudocode/blob/master/md/Alpha-Beta-Search.md
+            utility = float("-inf")
 
             for move in moves:
-                alphabeta_value = self.alphabeta(game.forecast_move(move), depth - 1, alpha, beta, "MinimizingPlayer")
+                alphabeta_value = self.alphabeta(game.forecast_move(move), depth - 1, alpha, beta, "MinimizingPlayer", self.max_depth)
 
-                # only set v to alphabeta_value, if alphabeta_value is the best minimum so far
-                if (alphabeta_value > v):
-                    best_move, v = move, alphabeta_value
+                if (alphabeta_value > utility):
+                    best_move, utility = move, alphabeta_value
 
-                if (v >= beta):
-                    return v
+                if (utility >= beta):
+                    return utility
 
-                alpha = max(alpha, v)
-            # only return a move tuple if we are at root node, otherwise return a utility value
-            if (depth is not self.search_depth):
-                return v
+                alpha = max(alpha, utility)
         else:
             moves = game.get_legal_moves(game.active_player)
 
@@ -421,20 +431,18 @@ class AlphaBetaPlayer(IsolationPlayer):
                 # ensure we return score from the perspective of the maximizing player
                 return self.score(game, game.get_opponent(game.active_player))
 
-            v = float("inf")
+            utility = float("inf")
 
             for move in moves:
-                alphabeta_value = self.alphabeta(game.forecast_move(move), depth - 1, alpha, beta, "MaximizingPlayer")
+                alphabeta_value = self.alphabeta(game.forecast_move(move), depth - 1, alpha, beta, "MaximizingPlayer", self.max_depth)
 
-                # only set v to alphabeta_value, if alphabeta_value is the best minimum so far
-                if (alphabeta_value < v):
-                    best_move, v = move, alphabeta_value
+                # only set utility to alphabeta_value, if alphabeta_value is the best minimum so far
+                if (alphabeta_value < utility):
+                    best_move, utility = move, alphabeta_value
 
-                if (v <= alpha):
-                    return v
+                if (utility <= alpha):
+                    return utility
 
-                beta = min(beta, v)
-            # only return a move tuple if we are at root node, otherwise return a utility value
-            if (depth is not self.search_depth):
-                return v
-        return best_move
+                beta = min(beta, utility)
+        # only return a move tuple if we are at root node, otherwise return a utility value
+        return utility if depth < self.max_depth else best_move
