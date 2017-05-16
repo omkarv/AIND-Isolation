@@ -3,12 +3,11 @@ test your agent's strength against a set of known agents using tournament.py
 and include the results in your report.
 """
 import random
-
+import math
 
 class SearchTimeout(Exception):
     """Subclass base exception for code clarity. """
     pass
-
 
 def custom_score(game, player):
     """Calculate the heuristic value of a game state from the point of view
@@ -40,15 +39,10 @@ def custom_score(game, player):
     if game.is_winner(player):
         return float("inf")
 
-    center_score = 0
-    if game.get_player_location(player) is not None:
-        y, x = game.get_player_location(player)
-        w, h = game.width / 2., game.height / 2.
-        center_score = float((h - y)**2 + (w - x)**2)
-
     own_moves = len(game.get_legal_moves(player))
     opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
-    return float(own_moves - opp_moves - 10 * center_score)
+
+    return float(own_moves - opp_moves)
 
 def custom_score_2(game, player):
     """Calculate the heuristic value of a game state from the point of view
@@ -112,7 +106,8 @@ def custom_score_3(game, player):
 
     own_moves = len(game.get_legal_moves(player))
     opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
-    return float(own_moves - opp_moves - center_score)
+
+    return float(own_moves - opp_moves - 0.125*math.sqrt(center_score))
 
 class IsolationPlayer:
     """Base class for minimax and alphabeta agents -- this class is never
@@ -189,7 +184,10 @@ class MinimaxPlayer(IsolationPlayer):
             return self.minimax(game, self.search_depth)
 
         except SearchTimeout:
-            pass  # Handle any actions required after timeout as needed
+            # select any legal move to prevent forfeits
+            moves = game.get_legal_moves()
+            if (len(moves) > 0):
+                best_move = moves[0]
 
         return best_move
 
@@ -232,8 +230,6 @@ class MinimaxPlayer(IsolationPlayer):
                 each helper function or else your agent will timeout during
                 testing.
         """
-        if self.time_left() < self.TIMER_THRESHOLD:
-            raise SearchTimeout()
 
         def min_value(self, game, current_depth):
 
@@ -282,6 +278,9 @@ class MinimaxPlayer(IsolationPlayer):
         moves = game.get_legal_moves()
         max_utility = float("-inf")
         best_move = (-1, -1)
+
+        if (len(moves) > 0):
+            best_move = moves[0]
 
         # main minimax routine
         for move in moves:
@@ -343,7 +342,10 @@ class AlphaBetaPlayer(IsolationPlayer):
                 best_move = self.alphabeta(game, depth)
 
         except SearchTimeout:
-            pass  # Handle any actions required after timeout as needed
+            # select any move if search timeout
+            moves = game.get_legal_moves()
+            if (len(moves) > 0):
+                best_move = moves[random.randint(0, len(moves) - 1)]
 
         return best_move
 
@@ -403,9 +405,12 @@ class AlphaBetaPlayer(IsolationPlayer):
 
         best_move = (-1, -1)
 
-        if player is "MaximizingPlayer":
-            moves = game.get_legal_moves()
+        moves = game.get_legal_moves()
+        if len(moves) > 0:
+            # select a move that doesn't forfeit the game
+            best_move = moves[random.randint(0, len(moves) - 1)]
 
+        if player is "MaximizingPlayer":
             # Terminal test
             if (depth is 0 or len(moves) is 0):
                 return self.score(game, game.active_player)
@@ -424,8 +429,6 @@ class AlphaBetaPlayer(IsolationPlayer):
 
                 alpha = max(alpha, utility)
         else:
-            moves = game.get_legal_moves(game.active_player)
-
             # Terminal test
             if (depth is 0 or len(moves) is 0):
                 # ensure we return score from the perspective of the maximizing player

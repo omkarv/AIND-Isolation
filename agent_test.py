@@ -34,12 +34,12 @@ class IsolationTest(unittest.TestCase):
         self.assertEqual(isolation_player.minimax(self.game, 2), (0, 0))
 
     def test_alphabeta(self):
-        isolation_player = game_agent.AlphaBetaPlayer(4)
-        self.assertEqual(isolation_player.alphabeta(self.game, 4), (0, 0))
-
-    def test_alphabeta_no_initial_depth(self):
         isolation_player = game_agent.AlphaBetaPlayer()
-        self.assertEqual(isolation_player.alphabeta(self.game, 3), (0, 0))
+        self.assertEqual(isolation_player.alphabeta(self.game, 7), (0, 0))
+
+    # def test_alphabeta_no_initial_depth(self):
+    #     isolation_player = game_agent.AlphaBetaPlayer()
+    #     self.assertEqual(isolation_player.alphabeta(self.game, 3), (0, 0))
 
 if __name__ == '__main__':
     unittest.main()
