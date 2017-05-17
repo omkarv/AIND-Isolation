@@ -68,7 +68,7 @@ def custom_score_2(game, player):
     """
     own_moves = len(game.get_legal_moves(player))
     opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
-    return float(own_moves - opp_moves)
+    return float((own_moves - opp_moves) / len(game.get_blank_spaces()))
 
 def custom_score_3(game, player):
     """Calculate the heuristic value of a game state from the point of view
@@ -137,6 +137,15 @@ class IsolationPlayer:
         self.time_left = None
         self.TIMER_THRESHOLD = timeout
 
+    def terminal_test(self, current_depth, moves):
+        return current_depth > self.search_depth or len(moves) is 0
+
+    def terminal_test_return_min_player(self, game):
+        # ensure we return score from the perspective of the maximizing player
+        return self.score(game, game.get_opponent(game.active_player))
+
+    def terminal_test_return_max_player(self, game):
+        return self.score(game, game.active_player)
 
 class MinimaxPlayer(IsolationPlayer):
     """Game-playing agent that chooses a move using depth-limited minimax
@@ -186,7 +195,7 @@ class MinimaxPlayer(IsolationPlayer):
         except SearchTimeout:
             # select any legal move to prevent forfeits
             moves = game.get_legal_moves()
-            if (len(moves) > 0):
+            if not moves:
                 best_move = moves[0]
 
         return best_move
@@ -238,10 +247,8 @@ class MinimaxPlayer(IsolationPlayer):
 
             moves = game.get_legal_moves()
 
-            # Terminal Test
-            if (current_depth > self.search_depth or len(moves) is 0):
-                # ensure we return score from the perspective of the maximizing player
-                return self.score(game, game.get_opponent(game.active_player))
+            if (self.terminal_test(current_depth, moves)):
+                return self.terminal_test_return_min_player(game)
 
             min_utility = float("inf")
 
@@ -260,9 +267,8 @@ class MinimaxPlayer(IsolationPlayer):
 
             moves = game.get_legal_moves(game.active_player)
 
-            # Terminal Test
-            if (current_depth > self.search_depth or len(moves) is 0):
-                return self.score(game, game.active_player)
+            if self.terminal_test(current_depth, moves):
+                return self.terminal_test_return_max_player(game)
 
             max_utility = float("-inf")
 
@@ -299,6 +305,9 @@ class AlphaBetaPlayer(IsolationPlayer):
     search with alpha-beta pruning. You must finish and test this player to
     make sure it returns a good move before the search time limit expires.
     """
+
+    def terminal_test(self, depth, moves):
+        return depth is 0 or len(moves) is 0
 
     def get_move(self, game, time_left):
         """Search for the best move from the available legal moves and return a
@@ -411,9 +420,8 @@ class AlphaBetaPlayer(IsolationPlayer):
             best_move = moves[random.randint(0, len(moves) - 1)]
 
         if player is "MaximizingPlayer":
-            # Terminal test
-            if (depth is 0 or len(moves) is 0):
-                return self.score(game, game.active_player)
+            if self.terminal_test(depth, moves):
+                return self.terminal_test_return_max_player(game)
 
             # the notation for utility is 'v' in AIMA https://github.com/aimacode/aima-pseudocode/blob/master/md/Alpha-Beta-Search.md
             utility = float("-inf")
@@ -429,10 +437,8 @@ class AlphaBetaPlayer(IsolationPlayer):
 
                 alpha = max(alpha, utility)
         else:
-            # Terminal test
-            if (depth is 0 or len(moves) is 0):
-                # ensure we return score from the perspective of the maximizing player
-                return self.score(game, game.get_opponent(game.active_player))
+            if self.terminal_test(depth, moves):
+                return self.terminal_test_return_min_player(game)
 
             utility = float("inf")
 
